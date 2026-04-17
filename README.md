@@ -15,7 +15,6 @@ This app is inspired by the *workflow* of hardware loop stations like the RC-505
   - State display: `Empty`, `Recording`, `Playing`, `Overdubbing`, `Stopped`
 - First completed recording defines the **master loop length**.
 - Additional tracks stay synchronized to that master loop clock.
-- After closing recording on additional tracks, playback is quantized to the next master loop boundary so all tracks restart together with Track 1.
 - Supports simple overdubbing by mixing incoming mic audio into an existing loop.
 - Uses a dark, performance-oriented UI.
 

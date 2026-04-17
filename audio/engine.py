@@ -96,18 +96,9 @@ class AudioEngine:
                 mixed = 0.0
 
                 idx = self.playhead % self.master_length_samples
-                if idx == 0:
-                    # Quantized track starts: any newly closed track begins at master boundary.
-                    for track in self.tracks:
-                        if track.pending_start and track.has_loop and track.state == TrackState.PLAYING:
-                            track.pending_start = False
 
                 for track in self.tracks:
-                    if (
-                        track.state in (TrackState.PLAYING, TrackState.OVERDUBBING)
-                        and track.has_loop
-                        and not track.pending_start
-                    ):
+                    if track.state in (TrackState.PLAYING, TrackState.OVERDUBBING) and track.has_loop:
                         mixed += float(track.loop_buffer[idx])
 
                     if track.state == TrackState.OVERDUBBING and track.has_loop:
@@ -124,7 +115,6 @@ class AudioEngine:
                             # Auto-close recording at end to avoid drifting lengths.
                             if track.record_pos >= self.master_length_samples:
                                 track.state = TrackState.PLAYING
-                                track.pending_start = True
 
                 outdata[i, 0] = np.clip(mixed, -1.0, 1.0)
                 self.playhead = (self.playhead + 1) % self.master_length_samples
@@ -149,7 +139,6 @@ class AudioEngine:
             if track.state == TrackState.EMPTY:
                 track.record_buffer.clear()
                 track.record_pos = 0
-                track.pending_start = False
                 track.state = TrackState.RECORDING
                 return f"Track {track_index + 1}: recording started"
 
@@ -171,10 +160,8 @@ class AudioEngine:
                         if other is not track and other.state == TrackState.RECORDING:
                             other.state = TrackState.EMPTY
                             other.record_buffer.clear()
-                            other.pending_start = False
 
                     track.state = TrackState.PLAYING
-                    track.pending_start = False
                     return f"Track {track_index + 1}: loop closed ({self.master_length_samples} samples)"
 
                 # Non-master manual close: zero-pad if shorter than master.
@@ -183,8 +170,7 @@ class AudioEngine:
                         track.loop_buffer = np.zeros(self.master_length_samples, dtype=np.float32)
                     # Remaining area already zero.
                 track.state = TrackState.PLAYING
-                track.pending_start = True
-                return f"Track {track_index + 1}: recording closed (starts next master loop)"
+                return f"Track {track_index + 1}: recording closed"
 
             if track.state in (TrackState.PLAYING, TrackState.STOPPED):
                 if not track.has_loop:

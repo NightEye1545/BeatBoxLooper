@@ -33,8 +33,6 @@ class LoopTrack:
     record_buffer: list[float] = field(default_factory=list)
     # Write position for fixed-length overdub/record-to-master-length operations.
     record_pos: int = 0
-    # If True, playback waits for master loop boundary (playhead=0) before sounding.
-    pending_start: bool = False
 
     @property
     def has_loop(self) -> bool:
@@ -47,4 +45,3 @@ class LoopTrack:
         self.loop_buffer = np.zeros(0, dtype=np.float32)
         self.record_buffer.clear()
         self.record_pos = 0
-        self.pending_start = False
