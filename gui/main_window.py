@@ -33,12 +33,15 @@ class MainWindow(QMainWindow):
         root_layout.setSpacing(12)
 
         self.master_label = QLabel("Master Loop: Not set")
+        self.metro_label = QLabel("Metronome: --")
         self.audio_label = QLabel("Audio: Starting...")
         self.master_label.setObjectName("TopLabel")
+        self.metro_label.setObjectName("TopLabel")
         self.audio_label.setObjectName("TopLabel")
 
         top_layout = QHBoxLayout()
         top_layout.addWidget(self.master_label)
+        top_layout.addWidget(self.metro_label)
         top_layout.addStretch(1)
         top_layout.addWidget(self.audio_label)
 
@@ -98,6 +101,8 @@ class MainWindow(QMainWindow):
             self.master_label.setText(f"Master Loop: {master} samples ({secs:.2f} s)")
 
         self.audio_label.setText(snapshot["device_status"])
+        metro_state = "On" if snapshot["metronome_enabled"] else "Off"
+        self.metro_label.setText(f"Metronome: {metro_state} @ {snapshot['bpm']:.1f} BPM")
 
         for i, track_data in enumerate(snapshot["tracks"]):
             self.track_widgets[i].update_state(track_data["state"])
