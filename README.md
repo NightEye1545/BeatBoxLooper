@@ -15,16 +15,7 @@ This app is inspired by the *workflow* of hardware loop stations like the RC-505
   - State display: `Empty`, `Recording`, `Playing`, `Overdubbing`, `Stopped`
 - First completed recording defines the **master loop length**.
 - Additional tracks stay synchronized to that master loop clock.
-- After closing recording on additional tracks, playback is quantized to the next master loop boundary so all tracks restart together with Track 1.
-- Includes a metronome with:
-  - BPM control
-  - Time-signature presets (`4/4`, `3/4`, `6/8`, `5/4`)
-  - On/off toggle
-- Smart recording trim:
-  - Removes leading silence/noise from recorded input based on an adjustable threshold.
-  - Master recording is padded to the next full bar, so loop end lands on metronome bar timing.
-  - Non-master recordings are trimmed then fit to the master length.
-- Live input level meter and threshold control to help avoid static/noise triggering early starts.
+- Supports simple overdubbing by mixing incoming mic audio into an existing loop.
 - Uses a dark, performance-oriented UI.
 
 ## Version 1 limitations (intentional)
@@ -32,8 +23,8 @@ This app is inspired by the *workflow* of hardware loop stations like the RC-505
 - No effects, BPM detection, MIDI, pitch shifting, time stretching.
 - No save/export, no cloud, no account system.
 - No waveform editor.
+- Additional tracks are designed to follow the master loop length for stable sync.
 - Device selection UI is not implemented yet (engine is structured so it can be added later).
-- Metronome uses synthesized click tones (simple prototype implementation).
 
 ## Requirements
 
@@ -90,4 +81,4 @@ BeatBoxLooper/
 
 ## Notes for future extension
 
-The code is split into GUI, loop-track model, and audio engine so that features like device dropdowns, per-track volume/mute, metronome accent samples, keyboard controls, and project save/load can be added later without rewriting the whole prototype.
+The code is split into GUI, loop-track model, and audio engine so that features like device dropdowns, per-track volume/mute, metronome, keyboard controls, and project save/load can be added later without rewriting the whole prototype.
