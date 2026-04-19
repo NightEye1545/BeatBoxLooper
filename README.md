@@ -14,6 +14,8 @@ This app is inspired by the *workflow* of hardware loop stations like the RC-505
   - **Clear**
   - State display: `Empty`, `Recording`, `Playing`, `Overdubbing`, `Stopped`
 - First completed recording defines the **master loop length**.
+- Built-in click-track **metronome** (default 120 BPM, 4/4) to guide timing.
+- First completed recording is automatically **quantized to the nearest beat** and defines the master loop length.
 - Additional tracks stay synchronized to that master loop clock.
 - Supports simple overdubbing by mixing incoming mic audio into an existing loop.
 - Uses a dark, performance-oriented UI.

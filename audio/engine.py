@@ -21,22 +21,60 @@ class AudioEngine:
     - GUI should call control methods from the UI thread; callback runs in audio thread.
     """
 
-    def __init__(self, track_count: int = 5, sample_rate: int = 44100, blocksize: int = 512) -> None:
+    def __init__(
+        self,
+        track_count: int = 5,
+        sample_rate: int = 44100,
+        blocksize: int = 512,
+        bpm: float = 120.0,
+        beats_per_bar: int = 4,
+    ) -> None:
         self.sample_rate = sample_rate
         self.blocksize = blocksize
         self.channels = 1
         self.track_count = track_count
+        self.bpm = bpm
+        self.beats_per_bar = beats_per_bar
 
         self.lock = threading.RLock()
         self.tracks = [LoopTrack(index=i) for i in range(track_count)]
 
         self.master_length_samples: int | None = None
         self.playhead = 0
+        self.pre_master_playhead = 0
         self.transport_running = False
 
         self.stream: sd.Stream | None = None
         self.last_error_message = ""
         self.device_status = "Audio: not started"
+        self.metronome_enabled = True
+        self.metronome_gain = 0.20
+
+    @property
+    def samples_per_beat(self) -> int:
+        """Number of samples in one beat at the configured BPM."""
+        return max(1, int(self.sample_rate * 60.0 / self.bpm))
+
+    def _beat_aligned_length(self, sample_length: int) -> int:
+        """Snap a loop length to the nearest beat boundary."""
+        beat = self.samples_per_beat
+        return max(beat, int(round(sample_length / beat)) * beat)
+
+    def _metronome_click(self, playhead_sample: int) -> float:
+        """Return a short synthesized click on beat boundaries."""
+        if not self.metronome_enabled:
+            return 0.0
+
+        beat = self.samples_per_beat
+        in_beat = playhead_sample % beat
+        click_len = max(4, int(0.01 * self.sample_rate))  # 10 ms
+        if in_beat >= click_len:
+            return 0.0
+
+        beat_index = (playhead_sample // beat) % self.beats_per_bar
+        amp = 1.0 if beat_index == 0 else 0.55
+        env = 1.0 - (in_beat / click_len)
+        return self.metronome_gain * amp * env
 
     def start(self) -> tuple[bool, str]:
         """Start audio stream and validate IO devices."""
@@ -116,6 +154,7 @@ class AudioEngine:
                             if track.record_pos >= self.master_length_samples:
                                 track.state = TrackState.PLAYING
 
+                mixed += self._metronome_click(self.playhead)
                 outdata[i, 0] = np.clip(mixed, -1.0, 1.0)
                 self.playhead = (self.playhead + 1) % self.master_length_samples
 
@@ -129,7 +168,8 @@ class AudioEngine:
             for track in self.tracks:
                 if track.state == TrackState.RECORDING:
                     track.record_buffer.append(mic_sample)
-            outdata[i, 0] = 0.0
+            outdata[i, 0] = self._metronome_click(self.pre_master_playhead)
+            self.pre_master_playhead += 1
 
     def toggle_record_overdub(self, track_index: int) -> str:
         """Handle Record/Overdub button behavior for a track."""
@@ -150,10 +190,15 @@ class AudioEngine:
                         track.record_buffer.clear()
                         return f"Track {track_index + 1}: recording too short, discarded"
 
-                    track.loop_buffer = np.array(track.record_buffer, dtype=np.float32)
+                    raw_loop = np.array(track.record_buffer, dtype=np.float32)
+                    aligned_len = self._beat_aligned_length(int(raw_loop.size))
+                    track.loop_buffer = np.zeros(aligned_len, dtype=np.float32)
+                    write_len = min(aligned_len, int(raw_loop.size))
+                    track.loop_buffer[:write_len] = raw_loop[:write_len]
                     track.record_buffer.clear()
                     self.master_length_samples = int(track.loop_buffer.size)
                     self.playhead = 0
+                    self.pre_master_playhead = 0
                     self.transport_running = True
 
                     for other in self.tracks:
@@ -211,6 +256,7 @@ class AudioEngine:
             if all(not t.has_loop for t in self.tracks):
                 self.master_length_samples = None
                 self.playhead = 0
+                self.pre_master_playhead = 0
                 self.transport_running = False
 
             return f"Track {track_index + 1}: cleared"
@@ -223,6 +269,8 @@ class AudioEngine:
                 "playhead": self.playhead,
                 "device_status": self.device_status,
                 "last_error": self.last_error_message,
+                "bpm": self.bpm,
+                "metronome_enabled": self.metronome_enabled,
                 "tracks": [
                     {
                         "index": t.index,
